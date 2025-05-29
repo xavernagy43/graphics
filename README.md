@@ -45,3 +45,40 @@ A játék indításakor egy főmenü jelenik meg az alábbi lehetőségekkel:
   - Max játékidő beállítása (perc:másodperc formátumban)
 - Help: Rövid ismertető az irányításról és a játékszabályokról (ez megjeleníthető játék közben is h-lenyomására)
 - Exit: Kilépés
+
+
+## Futtatás előtt
+
+1. 
+  1. Telepíts egy GLUT implementációt
+    A leggyakoribb választás: FreeGLUT (a GLUT nyílt forráskódú, modernizált változata).
+
+  2. Töltsd le a FreeGLUT-ot Windowsra
+    http://www.transmissionzero.co.uk/software/freeglut-devel/
+    A letöltött fájlok tartalmazni fogják:
+    freeglut.dll – futtatáshoz kell
+    freeglut.lib vagy libfreeglut.a – linkeléshez kell
+    GL/freeglut.h – fejlécek
+
+  3. Telepítés MinGW alá:
+    .a fájlokat másold a MinGW\lib mappába
+    .h fájlokat másold a MinGW\include\GL mappába
+    .dll fájlt másold a programod futtatható fájljának mellé
+
+2. 
+  1. Töltsd le az SDL2_mixer Windows/MinGW verzióját
+  https://github.com/libsdl-org/SDL_mixer/releases
+  – Keresd a fájlt, pl.:
+    SDL2_mixer-devel-2.x.x-mingw.tar.gz (nem MSVC!)
+
+  2. Másold a fájlokat:
+  A. Fejléc:
+    SDL_mixer.h → másold be:
+    c_sdk_220203/mingw/include/SDL2/ könyvtárba
+
+  B. Lib fájl:
+    libSDL2_mixer.a → másold be:
+    c_sdk_220203/mingw/lib/
+
+  C. DLL fájl:
+    SDL2_mixer.dll → másold a futtatható (wolf.exe) mellé

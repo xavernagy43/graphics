@@ -1,4 +1,6 @@
 #include <GL/glut.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_mixer.h>
 #include "menu.h"
 #include "settings.h"
 #include "previous_runs.h"
@@ -9,6 +11,7 @@
 
 GameSettings settings;
 SettingsMenuState settings_menu;
+Mix_Music* main_theme = NULL;
 
 int selected = 0;
 int in_menu = 1;
@@ -99,6 +102,7 @@ void mouse(int button, int state, int x, int y) {
             switch (selected) {
                 case MENU_START_GAME:
                     in_menu = 0; // Játék indítása
+                    Mix_HaltMusic();
                     glutPostRedisplay();
                     break;
                 case MENU_SETTINGS:
@@ -141,7 +145,16 @@ void mouse(int button, int state, int x, int y) {
 int main(int argc, char** argv) {
     char cwd[1024];
     _getcwd(cwd, sizeof(cwd));
-    printf("Aktuális könyvtár: %s\n", cwd);
+    printf("Actual directory: %s\n", cwd);
+
+    if (SDL_Init(SDL_INIT_AUDIO) < 0) {
+    printf("SDL audio init error: %s\n", SDL_GetError());
+    exit(1);
+    }
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+        printf("SDL_mixer error: %s\n", Mix_GetError());
+        exit(1);
+    }
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
@@ -151,11 +164,24 @@ int main(int argc, char** argv) {
     menu_background_init("assets/textures/main_menu_wolf.bmp");
     settings_load(&settings, "settings.dat");
 
+    main_theme = Mix_LoadMUS("assets/sounds/main_theme.ogg");
+    if (!main_theme) {
+        printf("Problem with music: %s\n", Mix_GetError());
+    } else {
+        printf("Music loaded successfully.\n");
+        Mix_VolumeMusic((int)(settings.volume * MIX_MAX_VOLUME));
+        Mix_PlayMusic(main_theme, -1); // -1 = végtelen loop
+    }
+
     glutDisplayFunc(display);
     glutSpecialFunc(special);
     glutKeyboardFunc(keyboard);
     glutMouseFunc(mouse);
 
     glutMainLoop();
+
+    Mix_FreeMusic(main_theme);
+    Mix_CloseAudio();
+    SDL_Quit();
     return 0;
 }
