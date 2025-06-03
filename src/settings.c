@@ -12,8 +12,8 @@ void settings_init(GameSettings* s) {
     s->key_action = 'E';
     s->volume = 1.0f;
     s->fog_enabled = 1;
-    s->max_time_minutes = 5;
-    s->max_time_seconds = 0;
+    s->max_time_minutes = 1;
+    s->max_time_seconds = 30;
 }
 
 void settings_save(const GameSettings* s, const char* filename) {

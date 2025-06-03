@@ -8,11 +8,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <direct.h>
+#include "hud.h"
 
 GameSettings settings;
 SettingsMenuState settings_menu;
 Mix_Music* main_theme = NULL;
 
+int score = 0;
+int in_game = 0;
 int selected = 0;
 int in_menu = 1;
 int in_settings = 0;
@@ -42,8 +45,12 @@ void display() {
         help_show(&settings);
     } else if( in_previous_runs) {
         previous_runs_show();
-    }  else {
-        // Játék vagy más tartalom
+    }  else if(in_game) {
+        hud_update_timer();
+        hud_draw(score);
+        if (hud_time_is_up()) {
+            // Játék vége, csak a HUD-ot rajzoljuk, inputot kezeljük
+        }
     }
 
     glutSwapBuffers();
@@ -79,13 +86,27 @@ void keyboard(unsigned char key, int x, int y) {
             in_help = 0;
             if (help_from_menu) {
                 in_menu = 1; // vissza főmenübe
-            } // ha nem menüből jöttünk, csak bezárja a helpet
+            }
+            // Ha játékból jöttünk, vissza a játékba:
             glutPostRedisplay();
         }
     } else if (in_previous_runs) {
         if (key == 27) { // ESC
             in_previous_runs = 0;
             in_menu = 1;
+            glutPostRedisplay();
+        }
+    } else if (in_game && hud_time_is_up()) {
+        if (key == 27) { // ESC
+            in_game = 0;
+            in_menu = 1;
+            hud_reset();
+            glutPostRedisplay();
+        }
+    } else if (in_game) {
+        if (key == 'h' || key == 'H') {
+            in_help = 1;
+            help_from_menu = 0;
             glutPostRedisplay();
         }
     }
@@ -102,6 +123,9 @@ void mouse(int button, int state, int x, int y) {
             switch (selected) {
                 case MENU_START_GAME:
                     in_menu = 0; // Játék indítása
+                    in_game = 1;
+                    score = 0;
+                    hud_start_timer(&settings);
                     Mix_HaltMusic();
                     glutPostRedisplay();
                     break;
@@ -139,7 +163,19 @@ void mouse(int button, int state, int x, int y) {
             settings_save(&settings, "settings.dat");
             glutPostRedisplay();
         }
+    }else if(in_game && hud_time_is_up() && button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        if (hud_game_over_mouse(x, y)) {
+            previous_runs_save(score);
+            in_game = 0;
+            in_menu = 1;
+            hud_reset();
+            glutPostRedisplay();
+        }
     }
+}
+
+void idle_func(void) {
+    glutPostRedisplay();
 }
 
 int main(int argc, char** argv) {
@@ -177,7 +213,7 @@ int main(int argc, char** argv) {
     glutSpecialFunc(special);
     glutKeyboardFunc(keyboard);
     glutMouseFunc(mouse);
-
+    glutIdleFunc(idle_func);
     glutMainLoop();
 
     Mix_FreeMusic(main_theme);
