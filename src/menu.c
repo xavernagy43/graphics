@@ -2,6 +2,7 @@
 #include <GL/glut.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "texture.h"
 
 static GLuint menu_bg_tex = 0;
 static int menu_bg_width = 0, menu_bg_height = 0;
@@ -15,57 +16,16 @@ static const char* menu_items[MENU_ITEM_COUNT] = {
 };
 
 void menu_background_init(const char* filename) {
-    printf("Betöltés: %s\n", filename);
-    FILE* f = fopen(filename, "rb");
-    if (!f) {
-        printf("Nem található a kép!\n");
-        return;
+    if (menu_bg_tex) {
+        glDeleteTextures(1, &menu_bg_tex);
+        menu_bg_tex = 0;
     }
-    unsigned char header[54];
-    if (fread(header, 1, 54, f) != 54) {
-        printf("Nem sikerült a BMP fejlécet beolvasni!\n");
-        fclose(f);
-        return;
+    menu_bg_tex = load_texture((char*)filename);
+    if (!menu_bg_tex) {
+        printf("Menu background not loaded: %s\n", filename);
+    } else {
+        printf("Menu background loaded: %s\n", filename);
     }
-    if (header[0] != 'B' || header[1] != 'M') {
-        printf("Nem BMP fájl!\n");
-        fclose(f);
-        return;
-    }
-    int width = *(int*)&header[18];
-    int height = *(int*)&header[22];
-    short bpp = *(short*)&header[28];
-    if (bpp != 24) {
-        printf("Csak 24 bites BMP támogatott! (bpp=%d)\n", bpp);
-        fclose(f);
-        return;
-    }
-    int size = 3 * width * height;
-    unsigned char* data = (unsigned char*)malloc(size);
-    if (fread(data, 1, size, f) != size) {
-        printf("Nem sikerült a képadatokat beolvasni!\n");
-        fclose(f);
-        free(data);
-        return;
-    }
-    fclose(f);
-
-    bmp_flip_vertical(data, width, height);
-
-    // majd utána a BGR->RGB átalakítás:
-    for (int i = 0; i < size; i += 3) {
-        unsigned char tmp = data[i];
-        data[i] = data[i+2];
-        data[i+2] = tmp;
-    }
-
-    glGenTextures(1, &menu_bg_tex);
-    glBindTexture(GL_TEXTURE_2D, menu_bg_tex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-    free(data);
-    printf("Sikeres betöltés: %dx%d\n", width, height);
 }
 
 void menu_background_free(void) {

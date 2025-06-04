@@ -9,7 +9,10 @@
 #include <stdlib.h>
 #include <direct.h>
 #include "hud.h"
+#include "camera.h"
+#include "map.h"
 
+Camera camera;
 GameSettings settings;
 SettingsMenuState settings_menu;
 Mix_Music* main_theme = NULL;
@@ -25,14 +28,17 @@ int in_previous_runs = 0;
 
 void display() {
     glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluOrtho2D(-1, 1, -1, 1);
+    // Csak akkor ortho, ha NEM in_game!
+    if (!in_game) {
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        gluOrtho2D(-1, 1, -1, 1);
 
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+    }
 
     if (in_menu || in_settings || in_help || in_previous_runs) {
         menu_draw_background();
@@ -43,11 +49,34 @@ void display() {
         settings_menu_draw(&settings, &settings_menu);
     } else if (in_help) {
         help_show(&settings);
-    } else if( in_previous_runs) {
+    } else if (in_previous_runs) {
         previous_runs_show();
-    }  else if(in_game) {
+    } else if (in_game) {
+        // 3D világ
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        gluPerspective(60.0, 1024.0/768.0, 0.1, 1000.0);
+
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        set_view(&camera);
+
+        draw_map();
+
+        // HUD 2D-ben
+        glDisable(GL_DEPTH_TEST);
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        gluOrtho2D(-1, 1, -1, 1);
+
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+
         hud_update_timer();
         hud_draw(score);
+
+        glEnable(GL_DEPTH_TEST);
+
         if (hud_time_is_up()) {
             // Játék vége, csak a HUD-ot rajzoljuk, inputot kezeljük
         }
@@ -127,6 +156,9 @@ void mouse(int button, int state, int x, int y) {
                     score = 0;
                     hud_start_timer(&settings);
                     Mix_HaltMusic();
+
+                    init_map();
+                    init_camera(&camera);
                     glutPostRedisplay();
                     break;
                 case MENU_SETTINGS:
@@ -178,6 +210,10 @@ void idle_func(void) {
     glutPostRedisplay();
 }
 
+void reshape(int w, int h) {
+    glViewport(0, 0, w, h);
+}
+
 int main(int argc, char** argv) {
     char cwd[1024];
     _getcwd(cwd, sizeof(cwd));
@@ -193,7 +229,8 @@ int main(int argc, char** argv) {
     }
 
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+    glEnable(GL_DEPTH_TEST);
     glutInitWindowSize(1024, 768);
     glutCreateWindow("Wolf Hunting");
 
@@ -209,6 +246,7 @@ int main(int argc, char** argv) {
         Mix_PlayMusic(main_theme, -1); // -1 = végtelen loop
     }
 
+    glutReshapeFunc(reshape);
     glutDisplayFunc(display);
     glutSpecialFunc(special);
     glutKeyboardFunc(keyboard);
